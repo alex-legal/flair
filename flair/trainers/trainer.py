@@ -123,6 +123,7 @@ class ModelTrainer:
         optimizer_state_dict: Optional[Dict[str, Any]] = None,
         scheduler_state_dict: Optional[Dict[str, Any]] = None,
         save_optimizer_state: bool = False,
+        callbacks=[],
         **kwargs,
     ) -> dict:
         """
@@ -818,6 +819,43 @@ class ModelTrainer:
                         self.model.load_state_dict(last_epoch_model_state_dict)
                         self.model.save(base_path / "pre-best-model.pt")
                         self.model.load_state_dict(current_state_dict)
+
+                for callback in callbacks:
+                    callback_metrics = {
+                        "epoch": epoch,
+                        "main_evaluation_metric": f"{main_evaluation_metric[1]} - {main_evaluation_metric[0]}",
+                        "train": {"loss": train_loss},
+                    }
+
+                    if log_train:
+                        callback_metrics["train_eval"] = {
+                            "loss": train_eval_result.loss,
+                            "score": train_eval_result.main_score,
+                            "classification_report": train_eval_result.classification_report,
+                        }
+
+                    if log_train_part:
+                        callback_metrics["train_part_eval"] = {
+                            "loss": train_part_eval_result.loss,
+                            "score": train_part_eval_result.main_score,
+                            "classification_report": train_part_eval_result.classification_report,
+                        }
+
+                    if log_dev:
+                        callback_metrics["dev_eval"] = {
+                            "loss": dev_eval_result.loss,
+                            "score": dev_eval_result.main_score,
+                            "classification_report": dev_eval_result.classification_report,
+                        }
+
+                    if log_test:
+                        callback_metrics["test_eval"] = {
+                            "loss": test_eval_result.loss,
+                            "score": test_eval_result.main_score,
+                            "classification_report": test_eval_result.classification_report,
+                        }
+
+                    callback(callback_metrics)
 
             if use_swa:
                 import torchcontrib
